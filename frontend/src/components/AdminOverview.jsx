@@ -3,6 +3,15 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
+
+
+const colorClasses = {
+  blue: { bg: "bg-blue-100", text: "text-blue-500" },
+  green: { bg: "bg-green-100", text: "text-green-500" },
+  red: { bg: "bg-red-100", text: "text-red-500" },
+  purple: { bg: "bg-purple-100", text: "text-purple-500" },
+};
+
 const StatCard = ({ title, value, icon, color }) => (
   <div className="bg-white rounded-lg shadow p-6">
     <div className="flex items-center justify-between">
@@ -11,9 +20,9 @@ const StatCard = ({ title, value, icon, color }) => (
         <h3 className="text-3xl font-bold mt-2">{value}</h3>
       </div>
       <div
-        className={`w-12 h-12 rounded-full bg-${color}-100 flex items-center justify-center`}
+        className={`w-12 h-12 rounded-full ${colorClasses[color].bg} flex items-center justify-center`}
       >
-        <i className={`bi bi-${icon} text-${color}-500 text-xl`}></i>
+        <i className={`bi bi-${icon} ${colorClasses[color].text} text-xl`}></i>
       </div>
     </div>
     <div className="mt-4">
@@ -26,6 +35,7 @@ const StatCard = ({ title, value, icon, color }) => (
     </div>
   </div>
 );
+
 
 const AdminOverview = () => {
   const [stats, setStats] = useState({

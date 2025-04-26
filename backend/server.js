@@ -27,7 +27,6 @@ app.use('/api/messages', require('./routes/messages'));
 app.use('/api/reports', require('./routes/reports'));
 app.use("/api/categories", require("./routes/categories"));
 
-
 // Basic route
 app.get('/', (req, res) => {
   res.send('INES Second-hand Materials API is running');

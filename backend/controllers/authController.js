@@ -10,15 +10,23 @@ const generateToken = (id) => {
   });
 };
 
-// Register user
+// Register user or admin
 exports.register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, phoneNumber } = req.body;
+    const { firstName, lastName, email, password, phoneNumber, role } =
+      req.body;
 
     // Check if user exists
     const userExists = await User.findOne({ where: { email } });
     if (userExists) {
       return res.status(400).json({ message: "User already exists" });
+    }
+
+    // Ensure only admins can register other admins
+    if (role === "admin" && req.user?.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Only admins can create other admins" });
     }
 
     // Create user
@@ -28,6 +36,7 @@ exports.register = async (req, res) => {
       email,
       password,
       phoneNumber,
+      role: role || "user", // Default to "user" if no role is provided
       profilePhoto: req.file ? req.file.path : null,
     });
 

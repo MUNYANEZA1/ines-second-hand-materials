@@ -12,12 +12,12 @@ const initializeDatabase = async () => {
 
     // Create admin user
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash("admin123", salt);
+    const hashedPassword = await bcrypt.hash("admin1234", salt);
 
     await User.create({
       firstName: "Admin",
       lastName: "User",
-      email: "admin@ines.ac.rw",
+      email: "admin1@ines.ac.rw",
       password: hashedPassword,
       role: "admin",
       phoneNumber: "123456789",

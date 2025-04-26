@@ -17,14 +17,16 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Basic validation
     if (!email || !password) {
       return setError("Please enter both email and password");
     }
 
     try {
-      setError("");
-      setLoading(true);
+      setError(""); // Clear previous errors
+      setLoading(true); // Set loading state
 
+      // Attempt login using the context's login function
       const result = await login(email, password);
 
       if (result.success) {
@@ -36,16 +38,32 @@ const LoginPage = () => {
         } else if (userRole === "user") {
           navigate(from, { replace: true });
         } else {
-          navigate("/", { replace: true }); // default fallback
+          navigate("/", { replace: true }); // Fallback to homepage if no role
         }
       } else {
-        setError(result.message || "Failed to login");
+        // If login fails, show the error from the API response
+        setError(
+          result.message || "Failed to login. Please check your credentials."
+        );
       }
     } catch (err) {
-      setError("Failed to login");
-      console.error(err);
+      console.error("Login error:", err);
+
+      // Handle different types of errors
+      if (err.response) {
+        // API responded with an error
+        setError(
+          err.response.data.message || "An error occurred during login."
+        );
+      } else if (err.request) {
+        // Network error or no response from the server
+        setError("Network error. Please try again.");
+      } else {
+        // Generic error
+        setError("Failed to login. Please try again.");
+      }
     } finally {
-      setLoading(false);
+      setLoading(false); // Reset loading state
     }
   };
 
@@ -55,12 +73,14 @@ const LoginPage = () => {
         Log In
       </h2>
 
+      {/* Display error message if any */}
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
 
+      {/* Login form */}
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label

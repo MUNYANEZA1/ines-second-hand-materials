@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import axios from "axios";
+import { format } from "date-fns";
+format(new Date(item.created_at), "MMM d, yyyy");
+
 
 const AdminItemsPage = () => {
   const { currentUser } = useAuth();
@@ -39,6 +42,7 @@ const AdminItemsPage = () => {
   };
 
   const handleReject = async (itemId) => {
+    if (!window.confirm("Are you sure you want to reject this item?")) return;
     try {
       await axios.put(`/api/admin/items/${itemId}/reject`);
       setPendingItems((prev) => prev.filter((item) => item.id !== itemId));
@@ -47,6 +51,7 @@ const AdminItemsPage = () => {
       console.error(err);
     }
   };
+  // Check if the user is an admin
 
   if (!currentUser || currentUser.role !== "admin") {
     return (
@@ -160,12 +165,14 @@ const AdminItemsPage = () => {
                       <button
                         onClick={() => handleApprove(item.id)}
                         className="text-green-600 hover:text-green-900"
+                        aria-label="Approve item"
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => handleReject(item.id)}
                         className="text-red-600 hover:text-red-900"
+                        aria-label="Reject item"
                       >
                         Reject
                       </button>

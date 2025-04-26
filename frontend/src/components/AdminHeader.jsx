@@ -1,16 +1,35 @@
 // src/components/AdminHeader.jsx
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 
 const AdminHeader = ({ user }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  const notifRef = useRef();
+  const userMenuRef = useRef();
+
   const notifications = [
     { id: 1, text: "New user registration", time: "5 minutes ago" },
     { id: 2, text: "New item reported", time: "1 hour ago" },
     { id: 3, text: "System update completed", time: "2 hours ago" },
   ];
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <header className="bg-white border-b border-gray-200 flex items-center justify-between px-6 py-3">
@@ -36,14 +55,14 @@ const AdminHeader = ({ user }) => {
       {/* Right-side buttons */}
       <div className="flex items-center space-x-4">
         {/* Notifications */}
-        <div className="relative">
+        <div className="relative" ref={notifRef}>
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="p-1 rounded-full hover:bg-gray-100 relative"
           >
             <i className="bi bi-bell text-lg"></i>
             <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-              3
+              {notifications.length}
             </span>
           </button>
 
@@ -78,7 +97,7 @@ const AdminHeader = ({ user }) => {
         </div>
 
         {/* User menu */}
-        <div className="relative">
+        <div className="relative" ref={userMenuRef}>
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center space-x-2 focus:outline-none"

@@ -1,8 +1,8 @@
 // src/pages/AdminReportsPage.jsx
-import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const AdminReportsPage = () => {
   const { currentUser } = useAuth();
@@ -47,6 +47,22 @@ const AdminReportsPage = () => {
     }
   };
 
+  
+
+  // Function to handle item removal
+  const handleRemoveItem = async (itemId, reportId) => {
+    try {
+      await axios.delete(`/api/items/${itemId}`);
+      await axios.put(`/api/reports/${reportId}/resolve`);
+
+      // Remove the report from list
+      setReports((prev) => prev.filter((report) => report.id !== reportId));
+    } catch (err) {
+      setError("Failed to remove item and resolve report");
+      console.error(err);
+    }
+  };
+
   if (!currentUser || currentUser.role !== "admin") {
     return null;
   }
@@ -81,7 +97,7 @@ const AdminReportsPage = () => {
                   Reporter
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Reporter
+                  Reported Type
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
