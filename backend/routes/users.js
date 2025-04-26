@@ -9,6 +9,11 @@ const {
 } = require("../controllers/userController");
 const { protect, authorize } = require("../middleware/auth");
 const upload = require("../middleware/upload");
+const { getMe } = require("../controllers/authController");
+
+// Add this above the ":id" route to avoid route conflicts
+router.get("/me", protect, getMe);
+
 
 // Get all users (admin only)
 router.get("/", protect, authorize("admin"), getUsers);

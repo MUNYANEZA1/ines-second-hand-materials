@@ -12,6 +12,19 @@ const HomePage = () => {
 
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
+  const token = localStorage.getItem("token");
+
+  axios.get("http://localhost:5000/api/items/featured", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  axios.get("http://localhost:5000/api/categories", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
   useEffect(() => {
     const fetchData = async () => {
       try {

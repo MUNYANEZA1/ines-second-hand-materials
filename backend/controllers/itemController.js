@@ -196,3 +196,74 @@ exports.getUserItems = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// Get featured items
+exports.getFeaturedItems = async (req, res) => {
+  try {
+    const items = await Item.findAll({
+      where: { status: 'available', approved: true },
+      order: Sequelize.literal('RAND()'), // Get random items
+      limit: 5,
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'firstName', 'lastName', 'email', 'profilePhoto']
+        }
+      ]
+    });
+
+    res.json(items);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get recent items
+exports.getRecentItems = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 4;
+
+    const items = await Item.findAll({
+      where: { status: 'available', approved: true },
+      order: [['created_at', 'DESC']],
+      limit,
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'firstName', 'lastName', 'email', 'profilePhoto']
+        }
+      ]
+    });
+
+    res.json(items);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get featured items
+exports.getFeaturedItems = async (req, res) => {
+  try {
+    const featuredItems = await Item.findAll({
+      where: {
+        approved: true,
+        status: 'available'
+      },
+      limit: 10, // or whatever number of featured items you want
+      order: [['created_at', 'DESC']],
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'firstName', 'lastName', 'email', 'profilePhoto']
+        }
+      ]
+    });
+
+    res.json(featuredItems);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

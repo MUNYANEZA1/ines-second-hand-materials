@@ -25,6 +25,8 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/items', require('./routes/items'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/reports', require('./routes/reports'));
+app.use("/api/categories", require("./routes/categories"));
+
 
 // Basic route
 app.get('/', (req, res) => {

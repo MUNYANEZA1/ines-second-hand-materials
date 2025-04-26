@@ -10,8 +10,19 @@ const {
   deleteItem,
   getUserItems,
 } = require("../controllers/itemController");
+const itemController = require("../controllers/itemController");
 const { protect, authorize } = require("../middleware/auth");
 const upload = require("../middleware/upload");
+// Add these below your existing routes
+const { getFeaturedItems, getRecentItems } = require("../controllers/itemController");
+
+
+// Route to get featured items
+router.get("/featured", protect, getFeaturedItems);
+
+// Route to get recent items
+router.get("/recent", protect, getRecentItems);
+
 
 // Create new item
 router.post("/", protect, upload.single("photo"), createItem);
@@ -30,5 +41,16 @@ router.delete("/:id", protect, deleteItem);
 
 // Get all items by a specific user
 router.get("/user/:userId", protect, getUserItems);
+
+// Add these two routes below your existing routes:
+
+// Get featured items
+router.get("/featured", protect, getFeaturedItems);
+
+// Get recent items
+router.get("/recent", protect, getRecentItems);
+
+router.get("/featured", itemController.getFeaturedItems);
+
 
 module.exports = router;
