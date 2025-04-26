@@ -267,3 +267,33 @@ exports.getFeaturedItems = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+exports.createItem = async (req, res) => {
+  try {
+    // Assuming you are using multer for photo upload
+    const { title, description, price, category, condition } = req.body;
+    const photo = req.file ? req.file.filename : null; // if using multer
+
+    // Here you would insert the item into your database
+    const newItem = {
+      title,
+      description,
+      price,
+      category,
+      condition,
+      photo,
+      status: "available", // default
+      approved: false, // default
+      user_id: req.user.id, // assuming user is authenticated
+    };
+
+    // Save newItem into your database here...
+
+    res
+      .status(201)
+      .json({ message: "Item created successfully", item: newItem });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error while creating item" });
+  }
+};

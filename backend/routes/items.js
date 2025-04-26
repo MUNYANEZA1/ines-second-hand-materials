@@ -52,5 +52,8 @@ router.get("/recent", protect, getRecentItems);
 
 router.get("/featured", itemController.getFeaturedItems);
 
+// POST route to add a new item
+router.post('/', itemController.createItem);
+
 
 module.exports = router;
