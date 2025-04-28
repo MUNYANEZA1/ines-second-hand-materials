@@ -1,254 +1,166 @@
 // src/pages/MessagesPage.jsx
 import { useState, useEffect } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import MessageList from "../components/MessageList";
-import ConversationView from "../components/ConversationView";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import ConversationList from "../components/messaging/ConversationList";
+import Conversation from "../components/messaging/Conversation";
+import LoadingSpinner from "../components/common/LoadingSpinner";
+import ErrorMessage from "../components/common/ErrorMessage";
+import { messageService } from "../services/messageService";
+import { useAuth } from "../hooks/useAuth";
 
 const MessagesPage = () => {
-  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [conversations, setConversations] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState(null);
-  const [selectedUserName, setSelectedUserName] = useState("");
+  const [activeConversation, setActiveConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProductInfo, setSelectedProductInfo] = useState(null);
+  const [error, setError] = useState(null);
 
-  // Fetch conversations (users you've messaged with)
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
+
+  // Fetch all conversations
   useEffect(() => {
     const fetchConversations = async () => {
-      try {
-        const response = await axios.get("/api/messages/conversations");
-        setConversations(response.data);
-        setLoading(false);
-
-        // Auto-select the first conversation if none selected
-        if (response.data.length > 0 && !selectedUserId) {
-          setSelectedUserId(response.data[0].userId);
-          setSelectedUserName(response.data[0].name);
-
-          // If there's product info in the conversation, set it
-          if (response.data[0].productInfo) {
-            setSelectedProductInfo(response.data[0].productInfo);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching conversations:", error);
-        setLoading(false);
-      }
-    };
-
-    if (currentUser) {
-      fetchConversations();
-    }
-  }, [currentUser, selectedUserId]);
-
-  // Fetch messages for selected conversation
-  useEffect(() => {
-    const fetchMessages = async () => {
-      if (!selectedUserId) return;
+      if (!user) return;
 
       try {
         setLoading(true);
-        const response = await axios.get(`/api/messages/${selectedUserId}`);
-        setMessages(response.data);
+        const conversationsData = await messageService.getConversations();
+        setConversations(conversationsData);
 
-        // Fetch product information if it exists for this conversation
-        try {
-          const productResponse = await axios.get(
-            `/api/messages/${selectedUserId}/product`
-          );
-          if (productResponse.data) {
-            setSelectedProductInfo(productResponse.data);
-          }
-        } catch (productError) {
-          console.error(
-            "No product associated with this conversation:",
-            productError
-          );
-          setSelectedProductInfo(null);
+        // Set first conversation as active if available
+        if (conversationsData.length > 0 && !activeConversation) {
+          setActiveConversation(conversationsData[0]);
         }
-
-        // Mark messages as read
-        await axios.post(`/api/messages/${selectedUserId}/read`);
-
-        // Update unread count in conversations list
-        setConversations((prevConversations) =>
-          prevConversations.map((convo) =>
-            convo.userId === selectedUserId
-              ? { ...convo, unreadCount: 0 }
-              : convo
-          )
-        );
-      } catch (error) {
-        console.error("Error fetching messages:", error);
+      } catch (err) {
+        setError("Failed to load conversations. Please try again later.");
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    if (selectedUserId) {
-      fetchMessages();
-    }
-  }, [selectedUserId]);
+    fetchConversations();
+  }, [user, activeConversation]);
 
-  const handleSelectConversation = (userId) => {
-    const selectedConvo = conversations.find(
-      (convo) => convo.userId === userId
-    );
-    if (selectedConvo) {
-      setSelectedUserId(userId);
-      setSelectedUserName(selectedConvo.name);
+  // Fetch messages for active conversation
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!activeConversation) return;
 
-      // Update product info if it exists for this conversation
-      if (selectedConvo.productInfo) {
-        setSelectedProductInfo(selectedConvo.productInfo);
-      } else {
-        setSelectedProductInfo(null);
-      }
-    }
-  };
-
-  const handleSendMessage = async (recipientId, content) => {
-    try {
-      const response = await axios.post("/api/messages", {
-        receiver_id: recipientId,
-        content,
-        product_id: selectedProductInfo?.id, // Include product ID if there's a product being discussed
-      });
-
-      // Add the new message to the current conversation
-      setMessages((prev) => [...prev, response.data]);
-
-      // Update the conversations list with the new last message
-      setConversations((prevConversations) => {
-        const existingConvoIndex = prevConversations.findIndex(
-          (convo) => convo.userId === recipientId
+      try {
+        const messagesData = await messageService.getMessagesByConversation(
+          activeConversation.id
         );
+        setMessages(messagesData);
+      } catch (err) {
+        console.error("Failed to load messages:", err);
+      }
+    };
 
-        if (existingConvoIndex >= 0) {
-          // Update existing conversation
-          const updatedConversations = [...prevConversations];
-          updatedConversations[existingConvoIndex] = {
-            ...updatedConversations[existingConvoIndex],
-            lastMessage: content,
-            timestamp: new Date().toISOString(),
-          };
-          return updatedConversations;
-        } else {
-          // Should not happen if already in conversation view
-          return prevConversations;
-        }
-      });
-    } catch (error) {
-      console.error("Error sending message:", error);
-    }
+    fetchMessages();
+
+    // Set up interval to check for new messages
+    const messageInterval = setInterval(fetchMessages, 5000);
+
+    return () => clearInterval(messageInterval);
+  }, [activeConversation]);
+
+  const selectConversation = (conversation) => {
+    setActiveConversation(conversation);
   };
 
-  // Handle price offer submission
-  const handleSendOffer = async (recipientId, amount) => {
-    if (!selectedProductInfo) return;
+  const sendMessage = async (content) => {
+    if (!activeConversation || !content.trim()) return;
 
     try {
-      // Create a formatted message with the offer
-      const offerMessage = `I'd like to offer $${amount} for ${selectedProductInfo.name}`;
-
-      await handleSendMessage(recipientId, offerMessage);
-
-      // You might also want to record this as a formal offer in your database
-      await axios.post("/api/offers", {
-        product_id: selectedProductInfo.id,
-        sender_id: currentUser.id,
-        receiver_id: recipientId,
-        amount: parseFloat(amount),
+      const newMessage = await messageService.sendMessage({
+        receiverId:
+          activeConversation.user.id === user.id
+            ? activeConversation.otherUser.id
+            : activeConversation.user.id,
+        content: content,
       });
-    } catch (error) {
-      console.error("Error sending offer:", error);
+
+      setMessages((prev) => [...prev, newMessage]);
+    } catch (err) {
+      console.error("Failed to send message:", err);
     }
   };
 
-  // Handle accepting an offer
-  const handleAcceptOffer = async (recipientId, offerId) => {
-    try {
-      await axios.post(`/api/offers/${offerId}/accept`);
-
-      // Send a confirmation message in the chat
-      await handleSendMessage(
-        recipientId,
-        "I've accepted your offer. Let's proceed with the transaction!"
-      );
-    } catch (error) {
-      console.error("Error accepting offer:", error);
-    }
-  };
+  if (!user) return null;
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage message={error} />;
 
   return (
-    <div className="container mx-auto my-8 p-4">
-      <h1 className="text-2xl font-bold mb-6">Messages</h1>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
+      className="container mx-auto px-4 py-8"
+    >
+      <h1 className="text-3xl font-bold mb-6">Messages</h1>
 
-      {loading && !conversations.length ? (
-        <div className="text-center py-8">
-          <p>Loading conversations...</p>
+      {conversations.length === 0 ? (
+        <div className="text-center p-8 bg-gray-50 rounded-lg">
+          <h2 className="text-xl font-semibold mb-2">No messages yet</h2>
+          <p className="text-gray-600">
+            Start a conversation by contacting a seller about an item you're
+            interested in.
+          </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-3 h-[600px]">
-            <div className="md:col-span-1">
-              <MessageList
-                conversations={conversations}
-                onSelectConversation={handleSelectConversation}
-                selectedUserId={selectedUserId}
-              />
-            </div>
-            <div className="md:col-span-2">
-              {selectedProductInfo && (
-                <div className="bg-blue-50 p-4 border-b border-blue-100">
-                  <div className="flex items-center">
-                    {selectedProductInfo.image && (
-                      <img
-                        src={selectedProductInfo.image}
-                        alt={selectedProductInfo.name}
-                        className="w-16 h-16 object-cover rounded mr-4"
-                      />
-                    )}
-                    <div>
-                      <h3 className="font-medium">
-                        {selectedProductInfo.name}
-                      </h3>
-                      <p className="text-blue-800 font-bold">
-                        ${selectedProductInfo.price}
-                      </p>
-                      <div className="mt-2 flex gap-2">
-                        <button
-                          onClick={() => {
-                            const offerAmount = prompt(
-                              "Enter your offer amount:"
-                            );
-                            if (offerAmount && !isNaN(offerAmount)) {
-                              handleSendOffer(selectedUserId, offerAmount);
-                            }
-                          }}
-                          className="bg-green-600 text-white px-3 py-1 rounded text-sm"
-                        >
-                          Make Offer
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <ConversationView
+        <div className="flex flex-col md:flex-row gap-6">
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="w-full md:w-1/3"
+          >
+            <ConversationList
+              conversations={conversations}
+              activeConversation={activeConversation}
+              onSelectConversation={selectConversation}
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="w-full md:w-2/3"
+          >
+            {activeConversation ? (
+              <Conversation
                 messages={messages}
-                recipientId={selectedUserId}
-                recipientName={selectedUserName}
-                onSendMessage={handleSendMessage}
-                isLoading={loading}
+                currentUser={user}
+                otherUser={
+                  activeConversation.user.id === user.id
+                    ? activeConversation.otherUser
+                    : activeConversation.user
+                }
+                onSendMessage={sendMessage}
               />
-            </div>
-          </div>
+            ) : (
+              <div className="text-center p-8 bg-gray-50 rounded-lg h-full flex items-center justify-center">
+                <p className="text-gray-600">
+                  Select a conversation to start messaging
+                </p>
+              </div>
+            )}
+          </motion.div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

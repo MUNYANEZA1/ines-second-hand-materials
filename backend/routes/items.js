@@ -1,7 +1,7 @@
-
 // routes/items.js
 const express = require("express");
 const router = express.Router();
+
 const {
   createItem,
   getItems,
@@ -9,51 +9,43 @@ const {
   updateItem,
   deleteItem,
   getUserItems,
+  getFeaturedItems,
+  getRecentItems,
 } = require("../controllers/itemController");
-const itemController = require("../controllers/itemController");
-const { protect, authorize } = require("../middleware/auth");
-const upload = require("../middleware/upload");
-// Add these below your existing routes
-const { getFeaturedItems, getRecentItems } = require("../controllers/itemController");
 
+const { protect } = require("../middleware/auth");
+const upload = require("../middleware/upload");
+
+// ===============================
+// Public routes (NO authentication needed)
+// ===============================
 
 // Route to get featured items
-router.get("/featured", protect, getFeaturedItems);
+router.get("/featured", getFeaturedItems);
 
 // Route to get recent items
-router.get("/recent", protect, getRecentItems);
+router.get("/recent", getRecentItems);
 
+// ===============================
+// Protected routes (authentication needed)
+// ===============================
 
-// Create new item
+// Create a new item (with photo upload)
 router.post("/", protect, upload.single("photo"), createItem);
 
-// Get all items (with filters)
+// Get all items (with filters/search)
 router.get("/", protect, getItems);
 
-// Get item by ID
-router.get("/:id", protect, getItemById);
+// Get single item by ID
+router.get("/:id", getItemById);
 
-// Update item
+// Update an item
 router.put("/:id", protect, upload.single("photo"), updateItem);
 
-// Delete item
+// Delete an item
 router.delete("/:id", protect, deleteItem);
 
 // Get all items by a specific user
 router.get("/user/:userId", protect, getUserItems);
-
-// Add these two routes below your existing routes:
-
-// Get featured items
-router.get("/featured", protect, getFeaturedItems);
-
-// Get recent items
-router.get("/recent", protect, getRecentItems);
-
-router.get("/featured", itemController.getFeaturedItems);
-
-// POST route to add a new item
-router.post('/', itemController.createItem);
-
 
 module.exports = router;

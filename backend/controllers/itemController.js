@@ -67,26 +67,32 @@ exports.getItemById = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['id', 'firstName', 'lastName', 'email', 'profilePhoto']
-        }
-      ]
+          attributes: ["id", "firstName", "lastName", "email", "profilePhoto"],
+        },
+      ],
     });
 
     if (!item) {
-      return res.status(404).json({ message: 'Item not found' });
+      return res.status(404).json({ message: "Item not found" });
     }
 
     // If the item is not approved and the user is not an admin or the item owner, deny access
-    if (!item.approved && req.user.role !== 'admin' && item.user_id !== req.user.id) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!item.approved) {
+      if (
+        !req.user ||
+        (req.user.role !== "admin" && item.user_id !== req.user.id)
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
     }
 
     res.json(item);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // Update item
 exports.updateItem = async (req, res) => {

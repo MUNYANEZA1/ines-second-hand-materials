@@ -1,7 +1,12 @@
 // routes/auth.js
 const express = require("express");
 const router = express.Router();
-const { register, login, getMe } = require("../controllers/authController");
+const {
+  register,
+  loginUser,
+  loginAdmin,
+  getMe,
+} = require("../controllers/authController");
 const { protect, authorize } = require("../middleware/auth");
 const upload = require("../middleware/upload");
 
@@ -17,14 +22,20 @@ router.post(
   register
 );
 
-// Login user
-router.post("/login", login);
+// Login user (regular users only)
+router.post("/login", loginUser);
+
+// Login admin (admin only)
+router.post("/admin/login", loginAdmin);
 
 // Get current user profile
 router.get("/me", protect, getMe);
 
 // Add a dedicated verification endpoint
 router.get("/verify", protect, (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
   // Return the user object from the auth middleware
   res.status(200).json({
     success: true,
@@ -40,3 +51,4 @@ router.get("/verify", protect, (req, res) => {
 });
 
 module.exports = router;
+

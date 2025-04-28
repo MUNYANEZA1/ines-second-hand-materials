@@ -1,16 +1,21 @@
+// src/main.jsx
 import React from "react";
-import { createRoot } from "react-dom/client";
-import App from "./App.jsx";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import axios from "axios";
+import App from "./App";
 import "./index.css";
-import { AuthProvider } from "./contexts/AuthContext";
-import { BrowserRouter as Router } from "react-router-dom";
 
-createRoot(document.getElementById("root")).render(
+// Configure axios defaults
+axios.defaults.headers.common["Content-Type"] = "application/json";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <Router>
+    <BrowserRouter>
       <AuthProvider>
         <App />
       </AuthProvider>
-    </Router>
+    </BrowserRouter>
   </React.StrictMode>
 );

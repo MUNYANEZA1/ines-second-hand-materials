@@ -58,13 +58,13 @@ exports.register = async (req, res) => {
 };
 
 // Login user
-exports.login = async (req, res) => {
+exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     // Check if user exists
     const user = await User.findOne({ where: { email } });
-    if (!user) {
+    if (!user || user.role !== "user") {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -83,6 +83,40 @@ exports.login = async (req, res) => {
       lastName: user.lastName,
       email: user.email,
       role: user.role,
+      token,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Login admin
+exports.loginAdmin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Check if admin exists
+    const admin = await User.findOne({ where: { email, role: "admin" } });
+    if (!admin) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Check if password matches
+    const isMatch = await admin.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Generate token
+    const token = generateToken(admin.id);
+
+    res.json({
+      id: admin.id,
+      firstName: admin.firstName,
+      lastName: admin.lastName,
+      email: admin.email,
+      role: admin.role,
       token,
     });
   } catch (error) {

@@ -1,277 +1,119 @@
 // src/pages/HomePage.jsx
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import axios from "axios";
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import ItemGrid from '../components/items/ItemGrid';
+import SearchFilters from '../components/items/SearchFilters';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import ErrorMessage from '../components/common/ErrorMessage';
+import { itemService } from '../services/itemService';
 
 const HomePage = () => {
-  const [featuredItems, setFeaturedItems] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [recentItems, setRecentItems] = useState([]);
+  const [items, setItems] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
-  const token = localStorage.getItem("token");
-
-  axios.get("http://localhost:5000/api/items/featured", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  axios.get("http://localhost:5000/api/categories", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+  const [filters, setFilters] = useState({
+    search: '',
+    category: 'all',
+    minPrice: '',
+    maxPrice: '',
+    condition: 'all'
   });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchItems = async () => {
       try {
         setLoading(true);
-
-        // Fetch data from the real backend API endpoints
-        const [featuredResponse, categoriesResponse, recentResponse] =
-          await Promise.all([
-            axios.get(`${apiUrl}/items/featured`),
-            axios.get(`${apiUrl}/categories`),
-            axios.get(`${apiUrl}/items/recent`, { params: { limit: 4 } }),
-          ]);
-
-        setFeaturedItems(featuredResponse.data);
-        setCategories(categoriesResponse.data);
-        setRecentItems(recentResponse.data);
+        const data = await itemService.getApprovedItems();
+        setItems(data);
+        setFilteredItems(data);
       } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Failed to load data. Please try again later.");
+        setError('Failed to fetch items. Please try again later.');
+        console.log(err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [apiUrl]);
+    fetchItems();
+  }, []);
+
+  useEffect(() => {
+    // Apply filters whenever filters change
+    let result = [...items];
+    
+    if (filters.search) {
+      result = result.filter(item => 
+        item.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        item.description.toLowerCase().includes(filters.search.toLowerCase())
+      );
+    }
+    
+    if (filters.category !== 'all') {
+      result = result.filter(item => item.category === filters.category);
+    }
+    
+    if (filters.minPrice) {
+      result = result.filter(item => item.price >= Number(filters.minPrice));
+    }
+    
+    if (filters.maxPrice) {
+      result = result.filter(item => item.price <= Number(filters.maxPrice));
+    }
+    
+    if (filters.condition !== 'all') {
+      result = result.filter(item => item.condition === filters.condition);
+    }
+    
+    setFilteredItems(result);
+  }, [filters, items]);
+
+  const handleFilterChange = (newFilters) => {
+    setFilters({ ...filters, ...newFilters });
+  };
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage message={error} />;
 
   return (
-    <div>
-      {/* Hero Section */}
-      <section className="bg-blue-800 text-white py-16 rounded-lg mb-10">
-        <div className="container mx-auto text-center px-4">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            INES-Ruhengeri Second-Hand Materials
-          </h1>
-          <p className="text-xl md:text-2xl mb-8">
-            Buy, sell, and exchange second-hand items within our academic
-            community
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              to="/items"
-              className="bg-white text-blue-800 font-bold py-3 px-6 rounded-lg hover:bg-blue-100 transition"
-            >
-              Browse Items
-            </Link>
-            <Link
-              to="/add-item"
-              className="bg-transparent border-2 border-white text-white font-bold py-3 px-6 rounded-lg hover:bg-white hover:text-blue-800 transition"
-            >
-              Sell an Item
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Content */}
-      <div className="container mx-auto px-4">
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            {error}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="container mx-auto px-4 py-8"
+    >
+      <motion.h1 
+        className="text-3xl font-bold mb-6 text-center"
+        initial={{ y: -20 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        Second-hand Materials at INES-Ruhengeri
+      </motion.h1>
+      
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+      >
+        <SearchFilters filters={filters} onFilterChange={handleFilterChange} />
+      </motion.div>
+      
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+      >
+        {filteredItems.length > 0 ? (
+          <ItemGrid items={filteredItems} />
+        ) : (
+          <div className="text-center mt-12 p-8 bg-gray-50 rounded-lg">
+            <h2 className="text-xl font-semibold mb-2">No items found</h2>
+            <p className="text-gray-600">Try adjusting your search filters or check back later.</p>
           </div>
         )}
-
-        {/* Featured Items */}
-        <section className="mb-12">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Featured Items</h2>
-            <Link to="/items" className="text-blue-800 hover:underline">
-              View All
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-          ) : featuredItems.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {featuredItems.map((item) => (
-                <Link
-                  to={`/items/${item.id}`}
-                  key={item.id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition"
-                >
-                  <img
-                    src={
-                      item.images && item.images.length > 0
-                        ? item.images[0]
-                        : "/api/placeholder/300/200"
-                    }
-                    alt={item.title}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="p-4">
-                    <h3 className="font-semibold text-lg mb-1 truncate">
-                      {item.title}
-                    </h3>
-                    <p className="text-green-700 font-bold">
-                      {item.price.toLocaleString()} RWF
-                    </p>
-                    <div className="flex justify-between mt-2 text-sm text-gray-600">
-                      <span>{item.condition}</span>
-                      <span>{item.category}</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-gray-100 p-6 rounded-lg text-center">
-              <p>No featured items available at the moment.</p>
-            </div>
-          )}
-        </section>
-
-        {/* Recent Items Section */}
-        <section className="mb-12">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Recently Added</h2>
-            <Link
-              to="/items?sort=newest"
-              className="text-blue-800 hover:underline"
-            >
-              View All
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-          ) : recentItems.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {recentItems.map((item) => (
-                <Link
-                  to={`/items/${item.id}`}
-                  key={item.id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition"
-                >
-                  <img
-                    src={
-                      item.images && item.images.length > 0
-                        ? item.images[0]
-                        : "/api/placeholder/300/200"
-                    }
-                    alt={item.title}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="p-4">
-                    <h3 className="font-semibold text-lg mb-1 truncate">
-                      {item.title}
-                    </h3>
-                    <p className="text-green-700 font-bold">
-                      {item.price.toLocaleString()} RWF
-                    </p>
-                    <div className="flex justify-between mt-2 text-sm text-gray-600">
-                      <span>{item.condition}</span>
-                      <span>{item.category}</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Posted {new Date(item.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-gray-100 p-6 rounded-lg text-center">
-              <p>No recent items available at the moment.</p>
-            </div>
-          )}
-        </section>
-
-        {/* Categories */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Browse by Category</h2>
-
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-          ) : categories.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {categories.map((category) => (
-                <Link
-                  to={`/items?category=${category.name}`}
-                  key={category.id}
-                  className="bg-white rounded-lg shadow-md p-4 text-center hover:shadow-lg transition"
-                >
-                  <h3 className="font-semibold mb-1">{category.name}</h3>
-                  <p className="text-gray-600 text-sm">
-                    {category.count} {category.count === 1 ? "item" : "items"}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-gray-100 p-6 rounded-lg text-center">
-              <p>No categories available at the moment.</p>
-            </div>
-          )}
-        </section>
-
-        {/* How It Works */}
-        <section className="mb-12 bg-gray-100 rounded-lg p-6">
-          <h2 className="text-2xl font-bold mb-6 text-center">How It Works</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="bg-blue-800 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="font-bold text-xl">1</span>
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Create an Account</h3>
-              <p className="text-gray-600">
-                Sign up with your INES-Ruhengeri email to access the platform.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-blue-800 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="font-bold text-xl">2</span>
-              </div>
-              <h3 className="font-semibold text-lg mb-2">
-                Browse or List Items
-              </h3>
-              <p className="text-gray-600">
-                Search for items you need or list items you want to sell.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-blue-800 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="font-bold text-xl">3</span>
-              </div>
-              <h3 className="font-semibold text-lg mb-2">
-                Connect and Exchange
-              </h3>
-              <p className="text-gray-600">
-                Use our messaging system to arrange meetups and complete
-                exchanges on campus.
-              </p>
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
